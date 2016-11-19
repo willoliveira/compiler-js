@@ -1,0 +1,3 @@
+{
+    "parses" :[ "if <condictional> then <comands> endif" ]
+}

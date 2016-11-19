@@ -1,0 +1,13 @@
+{
+    "tokens": [
+        "if", "then", "else", "int", "string", "array", "float",
+        "=", "+", ">", "<", "(", ")"
+    ],
+    "tokensWitType": {
+        "if": { "token": "if", "type": "condictional" },
+        "int": { "token": "int", "type": "type" },
+        "string": { "token": "string", "type": "type" },
+        "float": { "token": "float", "type": "type" },
+        "array": { "token": "array", "type": "type" }
+    }
+}
