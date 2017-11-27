@@ -2,12 +2,12 @@ int resultado;
 int numA;
 int numB;
 
-numA = 5;
-numB = 9;
-
-resultado = numA + numB;
-
 if (resultado > 10) then
-    log("Soma top");
-else 
-    log("Soma menos");
+    log(Somato);
+endif
+
+int contador;
+
+for (contador = 0; contador < 10; contador++) do 
+    log(contador);
+endfor

@@ -1,3 +1,13 @@
 {
-    "parses" :[ "if <condictional> then <comands> endif" ]
+    "handles" : {
+        "if": "if (<BlockCondictional>) then <BlockComands> endif",
+        "for": "for (<CondictionalRepetition>) do <BlockComands> endfor",
+        "int|string|float|char": "<type> <variable>",
+        "int": "int <variable>",
+        "string": "string <variable>",
+        "float": "float <variable>",
+        "char": "char <variable>",
+        "log": "log(<variableORstringORint>)",
+        "<variable>": "<variable> = <value>"
+    }
 }

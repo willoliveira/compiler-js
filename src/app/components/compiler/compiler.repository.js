@@ -12,7 +12,7 @@ class CompilerRepository extends BaseRepository {
     }
 
      static getTableSyntatic() {
-        return super.get("./samples/whatever/table.syntatic.json");
+        return super.get("./samples/whatever/table.syntactic.json");
     }
 }
 

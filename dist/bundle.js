@@ -71,6 +71,8 @@
 	    value: true
 	});
 	
+	var _typeof = typeof Symbol === "function" && typeof Symbol.iterator === "symbol" ? function (obj) { return typeof obj; } : function (obj) { return obj && typeof Symbol === "function" && obj.constructor === Symbol && obj !== Symbol.prototype ? "symbol" : typeof obj; };
+	
 	var _createClass = function () { function defineProperties(target, props) { for (var i = 0; i < props.length; i++) { var descriptor = props[i]; descriptor.enumerable = descriptor.enumerable || false; descriptor.configurable = true; if ("value" in descriptor) descriptor.writable = true; Object.defineProperty(target, descriptor.key, descriptor); } } return function (Constructor, protoProps, staticProps) { if (protoProps) defineProperties(Constructor.prototype, protoProps); if (staticProps) defineProperties(Constructor, staticProps); return Constructor; }; }();
 	
 	var _axios = __webpack_require__(/*! axios */ 2);
@@ -85,7 +87,13 @@
 	
 	function _classCallCheck(instance, Constructor) { if (!(instance instanceof Constructor)) { throw new TypeError("Cannot call a class as a function"); } }
 	
-	var fileClass, tableLexical, varsDeclared;
+	var fileClass,
+	    tableLexical,
+	    varsDeclared,
+	    errors = [],
+	    errorsLexico,
+	    errorsSyntactic = [],
+	    orderLacos = [];
 	
 	var Compiler = function () {
 	    function Compiler() {
@@ -122,33 +130,151 @@
 	        key: "analysisLexical",
 	        value: function analysisLexical(response) {
 	            if (response && response.data) {
+	                var parsesFormated = [];
 	                //guardando uma referencia da tabela lexica
 	                tableLexical = response.data;
-	                console.log(response.data);
+	                //quebra por linha
 	                var parses = fileClass.split(/\r?\n/);
 	                console.log(parses);
 	                varsDeclared = [];
 	                //varrendo as listas
 	                parses.forEach(function (value, index) {
 	                    var parse = value;
-	                    var formatTokens = value.replace(/[)|(|;]/g, " ").match(/\S+/g);
-	                    // console.log(formatTokens);
+	                    var formatTokens = value.replace(/[)|(|;]/g, " ");
+	                    var breakAspas = [];
+	                    //se houver strings
+	                    if (formatTokens.match(/\"/)) {
+	                        //como é string, quebra na aspas ao inves do espaço
+	                        breakAspas = formatTokens.match(/\"(.*?)\"/g);
+	                        breakAspas = breakAspas.map(function (value) {
+	                            return { value: value, string: true };
+	                        });
+	                        formatTokens = formatTokens.replace(/\"(.*?)\"/g, "");
+	                    }
+	                    //agora sim quebra por palabra
+	                    if (breakAspas.length) formatTokens = breakAspas.concat(formatTokens.match(/\S+/g));else formatTokens = formatTokens.match(/\S+/g);
+	
 	                    if (formatTokens) {
 	                        //varrendo os tokens                    
 	                        formatTokens.forEach(function (value, index) {
+	                            if ((typeof value === "undefined" ? "undefined" : _typeof(value)) == "object") return true;
 	                            //verifica se está na tabela de simbolos
 	                            var indexToken = tableLexical.tokens.indexOf(value);
 	                            //verifica o token
 	                            this.verifyToken(value, parse, formatTokens);
-	                            console.log(indexToken);
 	                            if (indexToken === -1) {
-	                                this.validToken(value, parse, formatTokens);
+	                                errors.push({ token: value, parse: parse, formatedTokens: formatTokens });
+	                                // this.validToken(value, parse, formatTokens);
 	                            }
-	                            // console.log(value, indexToken);
 	                        }.bind(this));
 	                    }
+	                    parsesFormated.push({ parse: parse, formatedTokens: formatTokens || [] });
 	                }.bind(this));
+	
+	                errors.forEach(function (valueError, index) {
+	                    var indexVars;
+	                    if (!isNaN(valueError.token)) {
+	                        valueError.removeError = true;
+	                        return true;
+	                    }
+	                    //verfica se o token é uma variavel
+	                    indexVars = varsDeclared.map(function (valueVarMap) {
+	                        return valueVarMap.var;
+	                    }).indexOf(valueError.token.trim());
+	                    //se for uma variavel, remove dos erros também
+	                    if (indexVars > -1) {
+	                        valueError.removeError = true;
+	                        return true;
+	                    } else {
+	                        for (var cont = 0, len = varsDeclared.length; cont < len; cont++) {
+	                            var filterVar = valueError.token.match(varsDeclared[cont].var);
+	                            if (filterVar && filterVar.length) {
+	                                valueError.removeError = true;
+	                                return;
+	                            }
+	                        };
+	                    }
+	                    valueError.removeError = false;
+	                }.bind(this));
+	                errorsLexico = errors.filter(function (value) {
+	                    return !value.removeError;
+	                });
+	                console.log("Erros léxicos: ", errorsLexico);
+	
+	                _compilerRepository2.default.getTableSyntatic().then(this.analysisSyntactic.bind(this, parsesFormated));
 	            }
+	        }
+	    }, {
+	        key: "isTypeLoopOrCondictional",
+	        value: function isTypeLoopOrCondictional(tableLexical, valueParse) {
+	            return tableLexical.tokensWitType[valueParse.formatedTokens[0]] && (tableLexical.tokensWitType[valueParse.formatedTokens[0]].type == "loop" || tableLexical.tokensWitType[valueParse.formatedTokens[0]].type == "condictional");
+	        }
+	
+	        /**
+	         * 
+	         */
+	
+	    }, {
+	        key: "analysisSyntactic",
+	        value: function analysisSyntactic(parses, response) {
+	            var tableSyntactic;
+	            // var iffs = [];
+	            // var fors;
+	            if (response && response.data) {
+	                tableSyntactic = response.data;
+	                parses.forEach(function (valueParse, index) {
+	                    valueParse.parse = valueParse.parse.trim();
+	                    // console.log(valueParse);
+	                    var tableSyntacticGet = tableSyntactic.handles[valueParse.formatedTokens[0]];
+	                    if (tableSyntacticGet) {
+	                        var strTransformed = tableSyntacticGet,
+	                            strAnalised = valueParse.parse,
+	                            str = void 0;
+	                        if (this.isTypeLoopOrCondictional(tableLexical, valueParse)) {
+	                            strTransformed = valueParse.parse;
+	                            strAnalised = tableSyntacticGet;
+	                            orderLacos.push(valueParse.formatedTokens[0]);
+	                        }
+	                        str = strTransformed.replace(/\(/, "\\(") //arrumas os ( que possam ter
+	                        .replace(/\)/, "\\)") //arrumas os ) que possam ter
+	                        .replace(/\s/g, ")\\s("); //arrumas os espaços e troca por )\s(
+	                        if (this.isTypeLoopOrCondictional(tableLexical, valueParse)) {
+	                            str = strTransformed.replace(/(\()(.+)(\))/g, ".+");
+	                        } else {
+	                            str = strTransformed.replace(/(<)([a-zA-Z]+)(>)/g, ".+");
+	                        }
+	                        var parseWithoutPontoVirgula = strAnalised.replace(/;/, "");
+	                        // var verifyParseLastLetter = parseWithoutPontoVirgula[ parseWithoutPontoVirgula.length - 1 ].match(/[a-z]/i);
+	                        // console.log(verifyParseLastLetter);
+	                        str = "(\\b" + str + ")";
+	                        //se for uma letra por ultimo
+	                        // if (verifyParseLastLetter) str = str + "\\b)";
+	                        // else str = str + ")";
+	                        var reg = new RegExp(str, "g");
+	                        //se for erro
+	                        if (!reg.exec(parseWithoutPontoVirgula)) {
+	                            //     console.log("sucesso!", valueParse, str, reg)
+	                            // } else {
+	                            // console.log("erro", valueParse, str, reg);
+	                            errorsSyntactic.push({ parse: valueParse.parse, line: index + 1 });
+	                        }
+	                    } else if (valueParse.parse) {
+	                        if (this.isTypeLoopOrCondictional(tableLexical, valueParse)) {
+	                            orderLacos.push(valueParse.formatedTokens[0]);
+	                            return true;
+	                        } else {
+	                            errorsSyntactic.push({ parse: valueParse.parse, line: index + 1 });
+	                            //console.log("AAQUI", valueParse.parse);
+	                        }
+	                    }
+	                }.bind(this));
+	                console.log("errorsSyntactic", errorsSyntactic);
+	            }
+	        }
+	    }, {
+	        key: "registerErrors",
+	        value: function registerErrors(error) {
+	            errors.push(error);
 	        }
 	    }, {
 	        key: "verifyToken",
@@ -162,17 +288,6 @@
 	                        type: tokenType.token
 	                    });
 	                }
-	            }
-	        }
-	    }, {
-	        key: "validToken",
-	        value: function validToken(token, parse, formatTokens) {
-	            var token = varsDeclared.map(function (value) {
-	                return value.var;
-	            }).indexOf(token);
-	            console.log(token);
-	            if (token) {
-	                console.log(token);
 	            }
 	        }
 	    }]);
@@ -1979,7 +2094,7 @@
 	    }, {
 	        key: "getTableSyntatic",
 	        value: function getTableSyntatic() {
-	            return _get(CompilerRepository.__proto__ || Object.getPrototypeOf(CompilerRepository), "get", this).call(this, "./samples/whatever/table.syntatic.json");
+	            return _get(CompilerRepository.__proto__ || Object.getPrototypeOf(CompilerRepository), "get", this).call(this, "./samples/whatever/table.syntactic.json");
 	        }
 	    }]);
 	
